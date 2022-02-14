@@ -5,12 +5,14 @@ import { ProductList } from './styles';
 import { api } from '../../services/api';
 import { formatPrice } from '../../util/format';
 import { useCart } from '../../hooks/useCart';
+import { toast } from 'react-toastify';
 
 interface Product {
   id: number;
   title: string;
   price: number;
   image: string;
+  amount: number;
 }
 
 interface ProductFormatted extends Product {
@@ -22,44 +24,66 @@ interface CartItemsAmount {
 }
 
 const Home = (): JSX.Element => {
-  // const [products, setProducts] = useState<ProductFormatted[]>([]);
-  // const { addProduct, cart } = useCart();
+  const [products, setProducts] = useState<ProductFormatted[]>([]);
+  const { addProduct, updateProductAmount, cart } = useCart();
 
-  // const cartItemsAmount = cart.reduce((sumAmount, product) => {
-  //   // TODO
-  // }, {} as CartItemsAmount)
+  const cartItemsAmount = cart.reduce((sumAmount, product) => {
+    sumAmount[product.id] = product.amount;
+    return sumAmount;
+  }, {} as CartItemsAmount)
 
   useEffect(() => {
     async function loadProducts() {
-      // TODO
+      api.get('/products').then((response) => {
+        if(response.status === 200) {
+          var productsResponse = response.data as Product[];
+          var formatedProds = productsResponse.map((product) => {
+            return {...product, priceFormatted: formatPrice(product.price)}
+          })
+  
+          setProducts(formatedProds);
+        } else {
+          toast.error(`Erro ao buscar produtos\n${response.statusText}`);
+        }
+      })
     }
 
     loadProducts();
   }, []);
 
-  function handleAddProduct(id: number) {
-    // TODO
+  async function handleAddProduct(id: number) {
+    if (cart.findIndex(x => x.id === id) === -1)
+      await addProduct(id);
+    else
+      updateProductAmount({productId: id, amount: cartItemsAmount[id]});
+    
+    console.log(cart)
+    console.log(cartItemsAmount)
   }
 
   return (
     <ProductList>
-      <li>
-        <img src="https://rocketseat-cdn.s3-sa-east-1.amazonaws.com/modulo-redux/tenis1.jpg" alt="Tênis de Caminhada Leve Confortável" />
-        <strong>Tênis de Caminhada Leve Confortável</strong>
-        <span>R$ 179,90</span>
-        <button
-          type="button"
-          data-testid="add-product-button"
-        // onClick={() => handleAddProduct(product.id)}
-        >
-          <div data-testid="cart-product-quantity">
-            <MdAddShoppingCart size={16} color="#FFF" />
-            {/* {cartItemsAmount[product.id] || 0} */} 2
-          </div>
+      {
+        products.map((product) => 
+          <li>
+            <img src={product.image} alt={product.title} />
+            <strong>{product.title}</strong>
+            <span>{product.priceFormatted}</span>
+            <button
+              type="button"
+              data-testid="add-product-button"
+              onClick={() => handleAddProduct(product.id)}
+            >
+              <div data-testid="cart-product-quantity">
+                <MdAddShoppingCart size={16} color="#FFF" />
+                {cartItemsAmount[product.id] || 0}
+              </div>
 
-          <span>ADICIONAR AO CARRINHO</span>
-        </button>
-      </li>
+              <span>ADICIONAR AO CARRINHO</span>
+            </button>
+          </li>
+        )
+      }
     </ProductList>
   );
 };

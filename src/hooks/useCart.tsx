@@ -23,23 +23,34 @@ const CartContext = createContext<CartContextData>({} as CartContextData);
 
 export function CartProvider({ children }: CartProviderProps): JSX.Element {
   const [cart, setCart] = useState<Product[]>(() => {
-    // const storagedCart = Buscar dados do localStorage
+    const storagedCart = localStorage.getItem('@RocketShoes:cart');
 
-    // if (storagedCart) {
-    //   return JSON.parse(storagedCart);
-    // }
+    if (storagedCart) {
+      return JSON.parse(storagedCart);
+    }
 
     return [];
   });
 
   const addProduct = async (productId: number) => {
     try {
-      // TODO
-    } catch {
-      // TODO
+      await api.get(`/products/${productId}`).then((response) => {
+          if(response.status === 200) {
+            var productResponse = response.data as Product;
+            var newCart = cart;
+            productResponse.amount = 1;
+            newCart.push(productResponse);
+            setCart(newCart);
+            localStorage.setItem('@RocketShoes:cart', JSON.stringify(newCart));
+          } else {
+            toast.error(`Erro ao buscar produto\n${response.statusText}`);
+          }
+        });
+    } catch (ex) {
+      toast.error(`Erro ao buscar produto\n${ex}`);
     }
   };
-
+ 
   const removeProduct = (productId: number) => {
     try {
       // TODO
@@ -53,9 +64,12 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
     amount,
   }: UpdateProductAmount) => {
     try {
-      // TODO
+      var newCart = cart;
+      var index = newCart.findIndex(x => x.id === productId);
+      newCart[index].amount = amount;
+      setCart(newCart);
     } catch {
-      // TODO
+      toast.error(`Erro ao atualizar quantidade de produtos no carrinho`);
     }
   };
 
