@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { MdAddShoppingCart } from 'react-icons/md';
 
 import { ProductList } from './styles';
@@ -12,25 +12,28 @@ interface Product {
   title: string;
   price: number;
   image: string;
-  amount: number;
 }
 
 interface ProductFormatted extends Product {
   priceFormatted: string;
 }
-
 interface CartItemsAmount {
   [key: number]: number;
 }
 
 const Home = (): JSX.Element => {
   const [products, setProducts] = useState<ProductFormatted[]>([]);
-  const { addProduct, updateProductAmount, cart } = useCart();
+  const { addProduct, cart } = useCart();
 
   const cartItemsAmount = cart.reduce((sumAmount, product) => {
-    sumAmount[product.id] = product.amount;
+    if (sumAmount[product.id]) {
+      sumAmount[product.id] += product.amount;
+    } else {
+      sumAmount[product.id] = product.amount;
+    }
+
     return sumAmount;
-  }, {} as CartItemsAmount)
+  }, {} as CartItemsAmount);
 
   useEffect(() => {
     async function loadProducts() {
@@ -52,20 +55,14 @@ const Home = (): JSX.Element => {
   }, []);
 
   async function handleAddProduct(id: number) {
-    if (cart.findIndex(x => x.id === id) === -1)
-      await addProduct(id);
-    else
-      updateProductAmount({productId: id, amount: cartItemsAmount[id]});
-    
-    console.log(cart)
-    console.log(cartItemsAmount)
+    await addProduct(id);
   }
 
   return (
     <ProductList>
       {
         products.map((product) => 
-          <li>
+          <li key={product.id}>
             <img src={product.image} alt={product.title} />
             <strong>{product.title}</strong>
             <span>{product.priceFormatted}</span>
